@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ViewState, MediaItem, SearchResultItem, UserProfile } from './types';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './views/Dashboard';
@@ -21,7 +21,7 @@ export interface SearchState {
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
-  const [previousView, setPreviousView] = useState<ViewState>('DASHBOARD');
+  // Removed previousView state as we now use browser history
   const [library, setLibrary] = useState<MediaItem[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: 'User', age: '' });
@@ -37,6 +37,45 @@ export default function App() {
     activeFilter: 'ALL',
     scrollTop: 0
   });
+
+  // History Management
+  useEffect(() => {
+    // Initialize history state if needed
+    if (!window.history.state) {
+        window.history.replaceState({ view: 'DASHBOARD' }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+        const state = event.state;
+        if (state && state.view) {
+            // Restore view
+            setCurrentView(state.view);
+            // Restore context if needed (e.g. for Detail view)
+            if (state.view === 'DETAILS' && state.item) {
+                setSelectedItem(state.item);
+            }
+        } else {
+            // Fallback for initial state or external navigation
+            setCurrentView('DASHBOARD');
+        }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Navigation Helper
+  const navigateTo = useCallback((view: ViewState, item?: MediaItem | SearchResultItem) => {
+      // Prevent duplicate history entries for main tabs
+      if (view === currentView && view !== 'DETAILS') return;
+
+      const newState = { view, item };
+      window.history.pushState(newState, '');
+      
+      setCurrentView(view);
+      if (item) setSelectedItem(item);
+  }, [currentView]);
+
 
   // Load from local storage on mount
   useEffect(() => {
@@ -84,21 +123,10 @@ export default function App() {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(userProfile));
   }, [userProfile]);
 
-  const handleNavigate = (view: ViewState) => {
-    if (view !== 'DETAILS' && currentView !== 'DETAILS') {
-        setPreviousView(currentView);
-    }
-    setCurrentView(view);
-  };
 
-  const handleSelectItem = (item: MediaItem | SearchResultItem) => {
-    setSelectedItem(item);
-    // If we are navigating to details, track where we came from
-    if (currentView !== 'DETAILS') {
-        setPreviousView(currentView);
-    }
-    setCurrentView('DETAILS');
-  };
+  const handleNavigate = (view: ViewState) => navigateTo(view);
+
+  const handleSelectItem = (item: MediaItem | SearchResultItem) => navigateTo('DETAILS', item);
 
   const handleSaveItem = (item: MediaItem) => {
     setLibrary(prev => {
@@ -144,7 +172,7 @@ export default function App() {
       if (data.library) setLibrary(data.library);
       if (data.groups) setGroups(data.groups);
       if (data.profile) setUserProfile(data.profile);
-      setCurrentView('DASHBOARD');
+      navigateTo('DASHBOARD');
   };
 
   const libraryIds = new Set(library.map(i => i.id));
@@ -158,11 +186,6 @@ export default function App() {
         onUpdateProfile={handleUpdateProfile}
       />
       
-      {/* 
-        Main content container needs logic for padding:
-        - Desktop: Left padding for sidebar (md:pl-64)
-        - Mobile: Top padding for header (pt-14) and Bottom padding for nav (pb-20)
-      */}
       <main className="flex-1 w-full h-full overflow-y-auto md:pl-64 pt-14 md:pt-0 pb-20 md:pb-0 transition-all duration-300">
         {currentView === 'DASHBOARD' && (
           <Dashboard 
@@ -197,7 +220,7 @@ export default function App() {
             <DetailView 
                 item={selectedItem}
                 libraryItem={library.find(i => i.id === selectedItem.id)}
-                onBack={() => setCurrentView(previousView)}
+                onBack={() => window.history.back()}
                 onSave={handleSaveItem}
                 onDelete={handleDeleteItem}
             />

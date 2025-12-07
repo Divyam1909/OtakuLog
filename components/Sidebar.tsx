@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, use
     setIsEditing(false);
   };
 
-  const navItems: { id: ViewState; label: string; icon: React.ElementType }[] = [
+  const navItems: { id: ViewState; label: string; icon: any }[] = [
     { id: 'DASHBOARD', label: 'Home', icon: Icons.Dashboard },
     { id: 'SEARCH', label: 'Discover', icon: Icons.Search },
     { id: 'LIBRARY', label: 'Library', icon: Icons.Library },
