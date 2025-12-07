@@ -1,13 +1,12 @@
-
 import React, { useState, useMemo } from 'react';
-import { MediaItem, UserStatus, MediaType } from '../types';
+import { MediaItem, UserStatus, MediaType, SearchResultItem } from '../types';
 import { MediaCard } from '../components/MediaCard';
 import { Icons } from '../components/Icons';
 
 interface LibraryViewProps {
   library: MediaItem[];
   groups: string[];
-  onSelectItem: (item: MediaItem) => void;
+  onSelectItem: (item: MediaItem | SearchResultItem) => void;
   onAddGroup: (name: string) => void;
   onRenameGroup: (oldName: string, newName: string) => void;
   onDeleteGroup: (name: string) => void;

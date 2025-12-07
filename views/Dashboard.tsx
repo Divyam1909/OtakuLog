@@ -2,7 +2,6 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { MediaItem, SearchResultItem, UserStatus } from '../types';
 import { Icons } from '../components/Icons';
 import { getRecommendations } from '../services/geminiService';
-import { Recharts } from '../components/Recharts'; // Wrapper
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { MediaCard } from '../components/MediaCard';
 
