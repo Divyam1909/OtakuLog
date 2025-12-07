@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ViewState, MediaItem, SearchResultItem, UserProfile } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -12,6 +11,14 @@ const STORAGE_KEY = 'otakulog_library_v1';
 const GROUPS_STORAGE_KEY = 'otakulog_groups_v1';
 const PROFILE_STORAGE_KEY = 'otakulog_profile_v1';
 
+export interface SearchState {
+  query: string;
+  results: SearchResultItem[];
+  page: number;
+  activeFilter: any;
+  scrollTop: number;
+}
+
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
   const [previousView, setPreviousView] = useState<ViewState>('DASHBOARD');
@@ -21,6 +28,15 @@ export default function App() {
   
   // Detail View State
   const [selectedItem, setSelectedItem] = useState<MediaItem | SearchResultItem | null>(null);
+
+  // Search Persistence State
+  const [searchState, setSearchState] = useState<SearchState>({
+    query: '',
+    results: [],
+    page: 1,
+    activeFilter: 'ALL',
+    scrollTop: 0
+  });
 
   // Load from local storage on mount
   useEffect(() => {
@@ -159,6 +175,8 @@ export default function App() {
           <SearchView 
             onSelectItem={handleSelectItem} 
             libraryIds={libraryIds}
+            savedState={searchState}
+            onSaveState={setSearchState}
           />
         )}
         {currentView === 'LIBRARY' && (

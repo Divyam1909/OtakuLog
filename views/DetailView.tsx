@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MediaItem, SearchResultItem, MediaDetails, UserStatus, MediaType } from '../types';
 import { getMediaDetails } from '../services/api';
@@ -66,6 +65,11 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, libraryItem, onBac
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
+  const handleProgressChange = (val: string) => {
+      const num = parseInt(val) || 0;
+      setFormData({...formData, userProgress: Math.max(0, num)});
+  };
+
   if (loading || !details) {
       return (
           <div className="flex items-center justify-center min-h-screen text-slate-500 gap-3">
@@ -123,7 +127,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, libraryItem, onBac
                         <select 
                             value={formData.userStatus}
                             onChange={(e) => handleStatusChange(e.target.value as UserStatus)}
-                            className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 outline-none focus:border-indigo-500"
+                            className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 outline-none focus:border-indigo-500 cursor-pointer"
                         >
                             {Object.values(UserStatus).map(s => (
                                 <option key={s} value={s}>{s}</option>
@@ -143,9 +147,10 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, libraryItem, onBac
                          <label className="text-xs font-bold text-slate-500 uppercase">Progress</label>
                          <div className="flex items-center gap-2">
                              <input 
-                                type="number" 
+                                type="number"
+                                min="0"
                                 value={formData.userProgress}
-                                onChange={(e) => setFormData({...formData, userProgress: parseInt(e.target.value) || 0})}
+                                onChange={(e) => handleProgressChange(e.target.value)}
                                 className="w-20 bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1.5 text-center outline-none focus:border-indigo-500"
                              />
                              <span className="text-slate-500 text-sm">/ {details.totalCount || '?'}</span>
@@ -276,23 +281,26 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, libraryItem, onBac
         {showMobileSheet && (
             <div className="fixed inset-0 z-50 lg:hidden">
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => setShowMobileSheet(false)} />
-                <div className="absolute bottom-0 left-0 right-0 bg-slate-900 rounded-t-3xl border-t border-slate-700 p-6 pb-safe animate-in slide-in-from-bottom duration-300">
+                <div className="absolute bottom-0 left-0 right-0 bg-slate-900 rounded-t-3xl border-t border-slate-700 p-6 pb-safe animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto">
                      <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
                      
                      <h3 className="text-lg font-bold text-white mb-6">Update Entry</h3>
                      
-                     <div className="space-y-5">
+                     <div className="space-y-6">
                          <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
-                            <select 
-                                value={formData.userStatus}
-                                onChange={(e) => handleStatusChange(e.target.value as UserStatus)}
-                                className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-base"
-                            >
-                                {Object.values(UserStatus).map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select 
+                                    value={formData.userStatus}
+                                    onChange={(e) => handleStatusChange(e.target.value as UserStatus)}
+                                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-base appearance-none"
+                                >
+                                    {Object.values(UserStatus).map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                                <Icons.ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-500 pointer-events-none" size={16} />
+                            </div>
                          </div>
 
                          <div className="flex gap-4">
@@ -309,15 +317,16 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, libraryItem, onBac
                                 <label className="text-xs font-bold text-slate-500 uppercase">Progress</label>
                                 <input 
                                     type="number" 
+                                    min="0"
                                     value={formData.userProgress}
-                                    onChange={(e) => setFormData({...formData, userProgress: parseInt(e.target.value) || 0})}
+                                    onChange={(e) => handleProgressChange(e.target.value)}
                                     className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-3 text-center outline-none focus:border-indigo-500 text-base"
                                     placeholder={details.totalCount?.toString() || '0'}
                                 />
                              </div>
                          </div>
 
-                         <div className="pt-2 flex gap-3">
+                         <div className="pt-2 flex gap-3 pb-4">
                              {libraryItem && (
                                 <button 
                                     onClick={() => {

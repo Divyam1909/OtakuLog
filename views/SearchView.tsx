@@ -1,23 +1,37 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SearchResultItem, MediaType } from '../types';
 import { Icons } from '../components/Icons';
 import { searchUniversal } from '../services/api';
 import { MediaCard } from '../components/MediaCard';
+import { SearchState } from '../App';
 
 interface SearchViewProps {
   onSelectItem: (item: SearchResultItem) => void;
   libraryIds: Set<string>;
+  savedState: SearchState;
+  onSaveState: (state: SearchState) => void;
 }
 
-export const SearchView: React.FC<SearchViewProps> = ({ onSelectItem, libraryIds }) => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResultItem[]>([]);
+export const SearchView: React.FC<SearchViewProps> = ({ onSelectItem, libraryIds, savedState, onSaveState }) => {
+  const [query, setQuery] = useState(savedState.query || '');
+  const [results, setResults] = useState<SearchResultItem[]>(savedState.results || []);
   const [loading, setLoading] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<MediaType | 'ALL'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<MediaType | 'ALL'>(savedState.activeFilter || 'ALL');
   const [includeNsfw] = useState(true);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(savedState.page || 1);
   const searchTimeoutRef = useRef<number | null>(null);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    if (savedState.scrollTop > 0) {
+        // Small timeout to allow layout to render
+        setTimeout(() => {
+            const main = document.querySelector('main');
+            if (main) main.scrollTop = savedState.scrollTop;
+            else window.scrollTo(0, savedState.scrollTop);
+        }, 10);
+    }
+  }, []);
 
   // New search vs Load More
   const executeSearch = async (isLoadMore: boolean = false) => {
@@ -53,9 +67,11 @@ export const SearchView: React.FC<SearchViewProps> = ({ onSelectItem, libraryIds
     if (e.key === 'Enter') handleSearch();
   }
 
-  // Auto-search when filters change
+  // Auto-search when filters change, but only if query changed or filter changed by user (not initial hydration)
   useEffect(() => {
-    if (query.trim()) {
+    const isInitialHydration = query === savedState.query && activeFilter === savedState.activeFilter && results.length > 0;
+    
+    if (query.trim() && !isInitialHydration) {
         if (searchTimeoutRef.current) window.clearTimeout(searchTimeoutRef.current);
         searchTimeoutRef.current = window.setTimeout(() => {
             executeSearch(false);
@@ -64,7 +80,20 @@ export const SearchView: React.FC<SearchViewProps> = ({ onSelectItem, libraryIds
     return () => {
         if (searchTimeoutRef.current) window.clearTimeout(searchTimeoutRef.current);
     }
-  }, [activeFilter, includeNsfw]);
+  }, [activeFilter, includeNsfw, query]);
+
+  const handleCardClick = (item: SearchResultItem) => {
+    // Save state before navigating
+    const main = document.querySelector('main');
+    onSaveState({
+        query,
+        results,
+        page,
+        activeFilter,
+        scrollTop: main ? main.scrollTop : window.scrollY
+    });
+    onSelectItem(item);
+  };
 
   const filters = ['ALL', ...Object.values(MediaType)];
 
@@ -123,8 +152,16 @@ export const SearchView: React.FC<SearchViewProps> = ({ onSelectItem, libraryIds
                     <MediaCard 
                         key={`${item.id}-${idx}`} 
                         item={item} 
-                        onSelect={onSelectItem} 
-                        onQuickAdd={onSelectItem}
+                        onSelect={() => handleCardClick(item)} 
+                        onQuickAdd={(item) => {
+                            // Quick add doesn't navigate, but we can still save state if needed, or not
+                            // Ideally quick add stays on page
+                             onSelectItem(item); // Note: Current generic props might navigate, but Dashboard uses generic. 
+                             // Wait, onSelectItem usually implies navigation. 
+                             // The prop is named onSelectItem, but we pass handleSelectItem from App.
+                             // handleSelectItem sets SelectedItem and changes view to DETAILS.
+                             // So yes, it navigates.
+                        }}
                         isInLibrary={libraryIds.has(item.id)}
                     />
                 ))}
